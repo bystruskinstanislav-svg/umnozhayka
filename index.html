@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2356C9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Умножайка">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Умножайка</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  :root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  body { margin: 0; }
+  [hidden] { display: none !important; }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Nunito:wght@400;600;700;800&family=Unbounded:wght@500;700;800&display=swap">
+<style>
+  :root {
+    --paper: #F5F8FC;
+    --grid: #DDE7F3;
+    --card: #FFFFFF;
+    --ink: #18264A;
+    --muted: #5A6788;
+    --line: #C8D5E8;
+    --pen: #2356C9;
+    --on-pen: #FFFFFF;
+    --pen-soft: #E3ECFB;
+    --red: #D63A3A;
+    --red-soft: #FBE3E1;
+    --green: #1F8F55;
+    --green-soft: #DDF2E5;
+    --marker: #FFD43B;
+    --marker-ink: #3A2E00;
+    --yellow-soft: #FFF1BF;
+    --new: #EDF1F7;
+    --display: "Unbounded", "Arial Rounded MT Bold", system-ui, sans-serif;
+    --body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --hand: "Caveat", "Comic Sans MS", cursive;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --paper: #1D2924; --grid: #25332D; --card: #26342E; --ink: #EEF2EA; --muted: #A9B8AE;
+      --line: #3A4B43; --pen: #8FC3FF; --on-pen: #10202E; --pen-soft: #2A3F4A; --red: #FF8A7A;
+      --red-soft: #4A2E2B; --green: #7ED9A0; --green-soft: #264536; --marker: #F6D55C;
+      --marker-ink: #2A2200; --yellow-soft: #4A4426; --new: #2C3A34;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #1D2924; --grid: #25332D; --card: #26342E; --ink: #EEF2EA; --muted: #A9B8AE;
+    --line: #3A4B43; --pen: #8FC3FF; --on-pen: #10202E; --pen-soft: #2A3F4A; --red: #FF8A7A;
+    --red-soft: #4A2E2B; --green: #7ED9A0; --green-soft: #264536; --marker: #F6D55C;
+    --marker-ink: #2A2200; --yellow-soft: #4A4426; --new: #2C3A34;
+  }
+
+  html, body { height: 100%; }
+  body {
+    background-color: var(--paper);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 22px 22px;
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.45;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+  button:focus-visible { outline: 3px solid var(--pen); outline-offset: 2px; }
+  h1, h2, h3 { margin: 0; text-wrap: balance; }
+  p { margin: 0; }
+
+  .app {
+    max-width: 480px;
+    min-height: 100%;
+    margin: 0 auto;
+    padding-inline: 16px;
+    padding-block: 12px 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+  }
+  .screen { display: flex; flex-direction: column; gap: 16px; flex: 1; }
+
+  /* ---------- header ---------- */
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .brand { font-family: var(--display); font-weight: 800; font-size: 26px; letter-spacing: -0.01em; }
+  .brand span { color: var(--pen); }
+  .icon-btn {
+    min-width: 44px; height: 44px; padding: 0 12px;
+    border: 2px solid var(--line); border-radius: 12px;
+    background: var(--card); font-weight: 700; font-size: 14px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 2px solid var(--line);
+    border-radius: 18px;
+    padding: 16px;
+  }
+  .label {
+    font-size: 12px; font-weight: 800; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted);
+  }
+
+  /* ---------- player ---------- */
+  .player { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; }
+  .rank-name { font-family: var(--display); font-weight: 700; font-size: 20px; }
+  .stars-total { font-family: var(--display); font-weight: 700; font-size: 20px; color: var(--ink); }
+  .stars-total .st { color: var(--marker); -webkit-text-stroke: 1px var(--marker-ink); }
+  .lvl-bar { grid-column: 1 / -1; height: 10px; border-radius: 99px; background: var(--new); overflow: hidden; }
+  .lvl-bar i { display: block; height: 100%; width: 0; background: var(--marker); border-radius: 99px; transition: width .6s ease; }
+  .lvl-next { grid-column: 1 / -1; font-size: 14px; color: var(--muted); }
+  .best { grid-column: 1 / -1; display: flex; justify-content: space-between; border-top: 2px dashed var(--line); padding-top: 10px; margin-top: 4px; font-weight: 700; }
+  .best b { font-family: var(--display); font-variant-numeric: tabular-nums; }
+
+  /* ---------- table chips ---------- */
+  .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+  .chip {
+    height: 52px; border-radius: 14px;
+    border: 2px solid var(--line); background: var(--card);
+    font-family: var(--display); font-weight: 700; font-size: 18px; color: var(--muted);
+  }
+  .chip[aria-pressed="true"] { background: var(--pen); border-color: var(--pen); color: var(--on-pen); }
+  .chip-all { grid-column: 1 / -1; height: 40px; font-family: var(--body); font-size: 15px; }
+  .chip-all[aria-pressed="true"] { background: var(--pen-soft); color: var(--pen); border-color: var(--pen); }
+
+  .btn {
+    display: block; width: 100%;
+    border-radius: 18px; border: 0;
+    font-family: var(--display); font-weight: 800;
+    padding: 18px 16px;
+  }
+  .btn-go {
+    background: var(--pen); color: var(--on-pen); font-size: 24px;
+    box-shadow: 0 5px 0 color-mix(in srgb, var(--pen) 60%, #000);
+  }
+  .btn-go small { display: block; font-family: var(--body); font-weight: 700; font-size: 14px; opacity: .85; margin-top: 2px; }
+  .btn-go:active { transform: translateY(3px); box-shadow: 0 2px 0 color-mix(in srgb, var(--pen) 60%, #000); }
+  .btn-fix {
+    background: var(--red-soft); color: var(--red); font-size: 17px;
+    border: 2px solid var(--red);
+  }
+  .btn-ghost { background: var(--card); border: 2px solid var(--line); color: var(--ink); font-size: 17px; }
+  .rules { font-size: 14px; color: var(--muted); text-align: center; max-width: 36ch; margin: 0 auto; }
+
+  /* ---------- pythagoras map ---------- */
+  .map-wrap { overflow-x: auto; margin-top: 10px; }
+  .map { width: 100%; border-collapse: separate; border-spacing: 3px; font-variant-numeric: tabular-nums; }
+  .map th { font-family: var(--display); font-size: 12px; font-weight: 700; color: var(--muted); padding: 2px; }
+  .map th:first-child { color: var(--pen); }
+  .map td {
+    text-align: center; font-size: 12px; font-weight: 700;
+    height: 30px; border-radius: 7px; background: var(--new); color: var(--muted);
+  }
+  .map tr.off td { opacity: .4; }
+  .m-hard { background: var(--red-soft) !important; color: var(--red) !important; box-shadow: inset 0 0 0 2px var(--red); }
+  .m-mid  { background: var(--yellow-soft) !important; color: var(--ink) !important; }
+  .m-ok   { background: var(--green-soft) !important; color: var(--green) !important; }
+  .m-good { background: var(--green) !important; color: var(--card) !important; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+
+  /* ---------- game ---------- */
+  #game { gap: 12px; }
+  .hud { display: flex; flex-direction: column; gap: 8px; }
+  .hud-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 800; }
+  .timebar { height: 14px; background: var(--new); border-radius: 99px; overflow: hidden; border: 2px solid var(--line); }
+  .timebar i { display: block; height: 100%; width: 100%; background: var(--pen); border-radius: 99px; }
+  .timebar.late i { background: var(--red); }
+  .time, .score { font-family: var(--display); font-variant-numeric: tabular-nums; font-size: 18px; }
+  .time small, .score small { font-family: var(--body); font-size: 13px; color: var(--muted); font-weight: 700; }
+  .streak {
+    font-family: var(--display); font-size: 15px; font-weight: 700;
+    padding: 6px 10px; border-radius: 99px; background: var(--new); color: var(--muted);
+    transition: background .2s;
+  }
+  .streak.hot { background: var(--marker); color: var(--marker-ink); }
+  .streak.pop { animation: pop .45s ease; }
+  .quit { height: 36px; min-width: 36px; font-size: 13px; }
+
+  .board {
+    position: relative; flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 150px;
+    background: var(--card); border: 2px solid var(--line); border-radius: 22px;
+  }
+  .board.good { border-color: var(--green); }
+  .board.bad { border-color: var(--red); }
+  .board.shake { animation: shake .35s ease; }
+  .problem {
+    font-family: var(--display); font-weight: 800;
+    font-size: clamp(42px, 14vw, 72px);
+    display: flex; align-items: baseline; gap: .22em;
+    font-variant-numeric: tabular-nums;
+  }
+  .problem .op { color: var(--muted); font-weight: 500; }
+  .ans {
+    min-width: 1.6em; text-align: center; color: var(--pen);
+    border-bottom: 4px solid var(--pen); line-height: 1.1;
+  }
+  .ans.empty { color: var(--line); }
+  .ans s { color: var(--muted); text-decoration-color: var(--red); text-decoration-thickness: 4px; font-size: .7em; }
+  .ans .red { font-family: var(--hand); color: var(--red); font-size: 1.15em; font-weight: 700; margin-left: .1em; }
+  .ans.wrong { border-color: var(--red); }
+  .float {
+    position: absolute; top: 14px; right: 16px;
+    font-family: var(--display); font-weight: 800; font-size: 22px; color: var(--green);
+    opacity: 0; pointer-events: none;
+  }
+  .float.show { animation: rise .8s ease forwards; }
+  .hint { position: absolute; bottom: 12px; font-family: var(--hand); font-size: 24px; color: var(--red); min-height: 1em; }
+
+  .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; user-select: none; -webkit-user-select: none; }
+  .key {
+    height: clamp(56px, 9vh, 70px);
+    border-radius: 16px; border: 2px solid var(--line);
+    border-bottom-width: 5px;
+    background: var(--card);
+    font-family: var(--display); font-weight: 700; font-size: 28px;
+  }
+  .key:active, .key.pressed { transform: translateY(3px); border-bottom-width: 2px; }
+  .key-ok { background: var(--green); border-color: color-mix(in srgb, var(--green) 70%, #000); color: var(--card); }
+  .key-del { color: var(--muted); font-size: 24px; }
+
+  .count {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-family: var(--display); font-weight: 800; font-size: 96px; color: var(--pen);
+    background: var(--card); border-radius: 20px;
+  }
+  .count.go { font-size: 44px; color: var(--green); }
+
+  /* ---------- result ---------- */
+  #result { gap: 14px; }
+  .sheet { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; padding-block: 20px; }
+  .remark { font-family: var(--hand); font-weight: 700; font-size: 44px; color: var(--red); transform: rotate(-3deg); line-height: 1; }
+  .rstars { display: flex; gap: 6px; font-size: 52px; line-height: 1; }
+  .rstars span { color: var(--new); -webkit-text-stroke: 2px var(--line); }
+  .rstars span.on { color: var(--marker); -webkit-text-stroke: 2px var(--marker-ink); animation: pop .5s ease backwards; }
+  .rstars span.on:nth-child(2) { animation-delay: .15s; }
+  .rstars span.on:nth-child(3) { animation-delay: .3s; }
+  .rscore { font-weight: 700; color: var(--muted); }
+  .rscore b { font-family: var(--display); font-size: 40px; color: var(--ink); display: block; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .badge { background: var(--marker); color: var(--marker-ink); font-weight: 800; padding: 6px 12px; border-radius: 99px; font-size: 14px; }
+  .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 0; }
+  .stats div { background: var(--card); border: 2px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+  .stats dt { font-size: 13px; color: var(--muted); font-weight: 700; }
+  .stats dd { margin: 0; font-family: var(--display); font-weight: 700; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .stats .ok dd { color: var(--green); }
+  .stats .no dd { color: var(--red); }
+  .list-card h3 { font-family: var(--display); font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .list-card ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .list-card li { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+  .list-card li b { font-family: var(--display); font-size: 18px; font-variant-numeric: tabular-nums; }
+  .list-card li s { color: var(--muted); text-decoration-color: var(--red); }
+  .list-card .note { font-size: 14px; color: var(--muted); margin-top: 8px; }
+  .conq { border-color: var(--green); background: var(--green-soft); }
+  .conq li { font-weight: 700; color: var(--green); }
+  .hard-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .hard-row span {
+    font-family: var(--display); font-weight: 700; font-size: 15px;
+    padding: 6px 10px; border-radius: 10px; background: var(--red-soft); color: var(--red);
+  }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .actions .btn-go { font-size: 19px; }
+
+  #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 10; width: 100%; height: 100%; }
+
+  @keyframes pop { 0% { transform: scale(.4); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-10px); } 40% { transform: translateX(9px); } 60% { transform: translateX(-6px); } 80% { transform: translateX(4px); } }
+  @keyframes rise { 0% { opacity: 0; transform: translateY(8px); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-26px); } }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ================= START ================= -->
+  <section class="screen" id="start">
+    <header class="top">
+      <h1 class="brand">Умнож<span>×</span>айка</h1>
+      <button class="icon-btn" id="soundBtn" aria-pressed="true">Звук: вкл</button>
+    </header>
+
+    <div class="card player">
+      <div>
+        <div class="label">Звание</div>
+        <div class="rank-name" id="rankName">Новичок</div>
+      </div>
+      <div class="stars-total"><span class="st">★</span> <span id="starsTotal">0</span></div>
+      <div class="lvl-bar"><i id="lvlFill"></i></div>
+      <p class="lvl-next" id="lvlNext"></p>
+      <div class="best"><span>Рекорд</span><span><b id="best">0</b> очков</span></div>
+    </div>
+
+    <div class="card">
+      <div class="label">Какие таблицы тренируем</div>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <button class="btn btn-go" id="goBtn">Старт!<small>60 секунд на скорость</small></button>
+    <button class="btn btn-fix" id="fixBtn" hidden>Работа над ошибками</button>
+    <p class="rules">Верный ответ — 10 очков. Быстрый ответ — до +5. Каждые 5 верных подряд умножают очки.</p>
+
+    <div class="card">
+      <div class="label">Таблица Пифагора — твой прогресс</div>
+      <div class="map-wrap"><table class="map" id="map"></table></div>
+      <div class="legend">
+        <span><i style="background:var(--new)"></i>Не было</span>
+        <span><i style="background:var(--red-soft);box-shadow:inset 0 0 0 2px var(--red)"></i>Трудно</span>
+        <span><i style="background:var(--yellow-soft)"></i>Медленно</span>
+        <span><i style="background:var(--green-soft)"></i>Знаю</span>
+        <span><i style="background:var(--green)"></i>Выучено</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= GAME ================= -->
+  <section class="screen" id="game" hidden>
+    <div class="hud">
+      <div class="timebar" id="timebar"><i id="timeFill"></i></div>
+      <div class="hud-row">
+        <span class="time"><span id="timeLeft">60</span> <small>сек</small></span>
+        <span class="streak" id="streak">Серия 0</span>
+        <span class="score"><span id="score">0</span> <small>очков</small></span>
+        <button class="icon-btn quit" id="quitBtn" aria-label="Выйти в меню">✕</button>
+      </div>
+    </div>
+
+    <div class="board" id="board">
+      <div class="problem" aria-live="polite">
+        <span id="qa">7</span><span class="op">×</span><span id="qb">8</span><span class="op">=</span><span class="ans empty" id="ans">?</span>
+      </div>
+      <div class="float" id="float"></div>
+      <div class="hint" id="hint"></div>
+      <div class="count" id="count" hidden>3</div>
+    </div>
+
+    <div class="keypad" id="keypad">
+      <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+      <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+      <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+      <button class="key key-del" data-k="del" aria-label="Стереть">⌫</button>
+      <button class="key" data-k="0">0</button>
+      <button class="key key-ok" data-k="ok" aria-label="Проверить">✓</button>
+    </div>
+  </section>
+
+  <!-- ================= RESULT ================= -->
+  <section class="screen" id="result" hidden>
+    <div class="card sheet">
+      <p class="remark" id="remark">Отлично!</p>
+      <div class="rstars" id="rstars"><span>★</span><span>★</span><span>★</span></div>
+      <div class="rscore"><b id="rScore">0</b>очков за раунд</div>
+      <div class="badges">
+        <span class="badge" id="newBest" hidden>Новый рекорд!</span>
+        <span class="badge" id="newRank" hidden></span>
+      </div>
+    </div>
+
+    <dl class="stats">
+      <div class="ok"><dt>Верно</dt><dd id="rOk">0</dd></div>
+      <div class="no"><dt>Ошибок</dt><dd id="rBad">0</dd></div>
+      <div><dt>Точность</dt><dd id="rAcc">0%</dd></div>
+      <div><dt>Среднее время</dt><dd id="rAvg">—</dd></div>
+    </dl>
+
+    <div class="card list-card conq" id="conqWrap" hidden>
+      <h3>Покорились!</h3>
+      <ul id="conq"></ul>
+    </div>
+
+    <div class="card list-card" id="mistWrap" hidden>
+      <h3>Повтори</h3>
+      <ul id="mist"></ul>
+    </div>
+
+    <div class="card list-card" id="hardWrap" hidden>
+      <h3>Твои трудные примеры</h3>
+      <div class="hard-row" id="hard"></div>
+      <p class="note">Они будут попадаться чаще, пока не запомнятся.</p>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-go" id="againBtn">Ещё раз</button>
+      <button class="btn btn-ghost" id="menuBtn">Меню</button>
+    </div>
+  </section>
+</div>
+<canvas id="confetti" hidden></canvas>
+
+<script>
+(() => {
+  const KEY = 'umnozhayka-v1';
+  const NUMS = [2, 3, 4, 5, 6, 7, 8, 9];
+  const ROUND_MS = 60000;
+  const LEVELS = [[0, 'Новичок'], [5, 'Ученик'], [15, 'Знаток'], [30, 'Мастер'], [60, 'Гений умножения']];
+  const $ = (id) => document.getElementById(id);
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- storage ----------
+  const defaults = () => ({ best: 0, stars: 0, tables: NUMS.slice(), sound: true, stats: {} });
+  function load() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(KEY));
+      if (raw && typeof raw === 'object') return Object.assign(defaults(), raw);
+    } catch (e) {}
+    return defaults();
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+  const S = load();
+
+  // ---------- difficulty model ----------
+  // Каждый пример (a×b) хранит: попытки, ошибки, 5 последних результатов, среднее время верного ответа.
+  function weight(k) {
+    const s = S.stats[k];
+    if (!s || !s.n) return 2;                       // ещё не встречался
+    const errs = s.last.filter((x) => !x).length;
+    let w = 1 + 3 * errs;                            // +3 за каждую свежую ошибку
+    const t = s.avgT || 0;
+    if (t > 5000) w += 2; else if (t > 3500) w += 1; // медленно = считал, а не помнил
+    const tail = s.last.slice(-3);
+    if (tail.length === 3 && tail.every(Boolean) && t && t < 3000) w *= 0.5; // уверенно выучен
+    return w;
+  }
+  function recordAnswer(k, ok, ms) {
+    const s = S.stats[k] || (S.stats[k] = { n: 0, err: 0, last: [], avgT: 0 });
+    s.n++;
+    if (!ok) s.err++;
+    s.last.push(ok ? 1 : 0);
+    if (s.last.length > 5) s.last.shift();
+    if (ok) s.avgT = s.avgT ? Math.round(s.avgT * 0.6 + ms * 0.4) : ms;
+  }
+  function mastery(k) {
+    const s = S.stats[k];
+    if (!s || !s.n) return 'new';
+    const w = weight(k);
+    if (w >= 4) return 'hard';
+    if (w >= 2) return 'mid';
+    if (s.n >= 3 && w <= 1) return 'good';
+    return 'ok';
+  }
+  const hardKeys = () => Object.keys(S.stats)
+    .filter((k) => weight(k) >= 3)
+    .sort((x, y) => weight(y) - weight(x));
+  const parse = (k) => k.split('x').map(Number);
+  const fmt = (k) => { const [a, b] = parse(k); return `${a} × ${b}`; };
+
+  function levelOf(stars) {
+    let i = 0;
+    LEVELS.forEach(([min], j) => { if (stars >= min) i = j; });
+    return i;
+  }
+
+  // ---------- sound & vibration ----------
+  let AC = null;
+  function audio() {
+    if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+    if (AC.state === 'suspended') AC.resume();
+    return AC;
+  }
+  function tone(freq, dur, type = 'triangle', when = 0, vol = 0.14) {
+    if (!S.sound) return;
+    const c = audio(); if (!c) return;
+    const t = c.currentTime + when;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(c.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  const SFX = {
+    ok() { tone(660, 0.1); tone(990, 0.14, 'triangle', 0.07); },
+    bad() { tone(196, 0.28, 'square', 0, 0.06); },
+    streak() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.14, 'triangle', i * 0.07)); },
+    tick() { tone(1200, 0.05, 'sine', 0, 0.07); },
+    go() { tone(880, 0.25, 'triangle', 0, 0.16); },
+    end() { [392, 523, 659, 784, 1047].forEach((f, i) => tone(f, 0.22, 'triangle', i * 0.11)); },
+  };
+  function buzz(p) { if (!S.sound) return; try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} }
+
+  let wakeLock = null;
+  function holdScreen() {
+    try { navigator.wakeLock && navigator.wakeLock.request('screen').then((l) => { wakeLock = l; }).catch(() => {}); } catch (e) {}
+  }
+  function releaseScreen() { try { wakeLock && wakeLock.release(); } catch (e) {} wakeLock = null; }
+
+  // ---------- screens ----------
+  function show(id) {
+    ['start', 'game', 'result'].forEach((s) => { $(s).hidden = s !== id; });
+    window.scrollTo(0, 0);
+  }
+
+  // ---------- start screen ----------
+  function renderChips() {
+    const all = S.tables.length === NUMS.length;
+    $('chips').innerHTML = NUMS.map((n) =>
+      `<button class="chip" data-n="${n}" aria-pressed="${S.tables.includes(n)}">×${n}</button>`
+    ).join('') + `<button class="chip chip-all" data-n="all" aria-pressed="${all}">Все таблицы</button>`;
+  }
+  $('chips').addEventListener('click', (e) => {
+    const b = e.target.closest('.chip'); if (!b) return;
+    const n = b.dataset.n;
+    if (n === 'all') {
+      S.tables = S.tables.length === NUMS.length ? [7] : NUMS.slice();
+    } else {
+      const v = +n;
+      if (S.tables.includes(v)) { if (S.tables.length > 1) S.tables = S.tables.filter((x) => x !== v); }
+      else S.tables = S.tables.concat(v).sort((a, b) => a - b);
+    }
+    save(); renderStart();
+  });
+
+  function renderMap() {
+    let h = '<tr><th>×</th>' + NUMS.map((n) => `<th>${n}</th>`).join('') + '</tr>';
+    for (const a of NUMS) {
+      h += `<tr class="${S.tables.includes(a) ? '' : 'off'}"><th>${a}</th>` +
+        NUMS.map((b) => `<td class="m-${mastery(a + 'x' + b)}">${a * b}</td>`).join('') + '</tr>';
+    }
+    $('map').innerHTML = h;
+  }
+
+  function renderStart() {
+    const li = levelOf(S.stars);
+    $('rankName').textContent = LEVELS[li][1];
+    $('starsTotal').textContent = S.stars;
+    $('best').textContent = S.best;
+    if (li < LEVELS.length - 1) {
+      const [from] = LEVELS[li], [to, name] = LEVELS[li + 1];
+      $('lvlFill').style.width = Math.round((S.stars - from) / (to - from) * 100) + '%';
+      $('lvlNext').textContent = `До звания «${name}» — ещё ${to - S.stars} ★`;
+    } else {
+      $('lvlFill').style.width = '100%';
+      $('lvlNext').textContent = 'Высшее звание! Продолжай бить рекорды.';
+    }
+    $('soundBtn').textContent = S.sound ? 'Звук: вкл' : 'Звук: выкл';
+    $('soundBtn').setAttribute('aria-pressed', S.sound);
+    const hk = hardKeys();
+    $('fixBtn').hidden = hk.length === 0;
+    $('fixBtn').textContent = `Работа над ошибками · ${Math.min(hk.length, 10)}`;
+    renderChips();
+    renderMap();
+  }
+
+  $('soundBtn').addEventListener('click', () => { S.sound = !S.sound; save(); renderStart(); if (S.sound) SFX.ok(); });
+  $('goBtn').addEventListener('click', () => startRound('normal'));
+  $('fixBtn').addEventListener('click', () => startRound('mistakes'));
+
+  // ---------- round ----------
+  let R = null;
+
+  function startRound(mode) {
+    audio();
+    let pool;
+    if (mode === 'mistakes') {
+      pool = hardKeys().slice(0, 10);
+      if (!pool.length) mode = 'normal';
+    }
+    if (mode === 'normal') {
+      pool = [];
+      S.tables.forEach((a) => NUMS.forEach((b) => pool.push(a + 'x' + b)));
+    }
+    R = {
+      mode, pool, score: 0, correct: 0, wrong: 0, streak: 0, times: [], mistakes: [],
+      requeue: [], qi: 0, lastKey: null, cur: null, ans: 0, input: '', locked: true,
+      qStart: 0, start: 0, ended: false, lastSec: 60,
+      hardBefore: hardKeys().filter((k) => weight(k) >= 4),
+      levelBefore: levelOf(S.stars),
+    };
+    $('score').textContent = '0';
+    $('timeLeft').textContent = '60';
+    $('timeFill').style.width = '100%';
+    $('timebar').classList.remove('late');
+    setStreak();
+    show('game');
+    holdScreen();
+    countdown();
+  }
+
+  function countdown() {
+    const el = $('count');
+    el.hidden = false; el.classList.remove('go');
+    const steps = ['3', '2', '1', 'Вперёд!'];
+    let i = 0;
+    const step = () => {
+      if (!R || R.ended) return;
+      el.textContent = steps[i];
+      if (i === 3) { el.classList.add('go'); SFX.go(); } else SFX.tick();
+      i++;
+      if (i < steps.length) setTimeout(step, 650);
+      else setTimeout(() => {
+        if (!R || R.ended) return;
+        el.hidden = true;
+        R.start = performance.now();
+        nextQuestion();
+        requestAnimationFrame(tick);
+      }, 500);
+    };
+    step();
+  }
+
+  function pickWeighted(list) {
+    const ws = list.map(weight);
+    let r = Math.random() * ws.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < list.length; i++) { r -= ws[i]; if (r <= 0) return list[i]; }
+    return list[list.length - 1];
+  }
+
+  function nextQuestion() {
+    R.qi++;
+    let k = null;
+    // ошибочный пример возвращается через 3–5 заданий
+    const due = R.requeue.findIndex((q) => q.at <= R.qi && q.k !== R.lastKey);
+    if (due >= 0) k = R.requeue.splice(due, 1)[0].k;
+    else {
+      const cands = R.pool.length > 1 ? R.pool.filter((x) => x !== R.lastKey) : R.pool;
+      k = pickWeighted(cands);
+    }
+    const [a, b] = parse(k);
+    R.cur = k; R.lastKey = k; R.ans = a * b; R.input = '';
+    $('qa').textContent = a; $('qb').textContent = b;
+    $('hint').textContent = '';
+    $('board').classList.remove('good', 'bad');
+    renderInput();
+    R.qStart = performance.now();
+    R.locked = false;
+  }
+
+  function renderInput() {
+    const el = $('ans');
+    el.classList.remove('wrong');
+    el.classList.toggle('empty', !R.input);
+    el.textContent = R.input || '?';
+  }
+
+  function press(k) {
+    if (!R || R.locked || R.ended) return;
+    if (k === 'del') { R.input = R.input.slice(0, -1); renderInput(); return; }
+    if (k === 'ok') { if (R.input) submit(); return; }
+    if (R.input.length >= 3) return;
+    R.input += k;
+    renderInput();
+    if (R.input.length >= String(R.ans).length) submit();
+  }
+
+  function setStreak(pop) {
+    const el = $('streak');
+    const mult = Math.min(3, 1 + Math.floor(R.streak / 5));
+    el.textContent = mult > 1 ? `🔥 ${R.streak} · ×${mult}` : `Серия ${R.streak}`;
+    el.classList.toggle('hot', mult > 1);
+    if (pop && !reduced) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+  }
+
+  function flash(text) {
+    const f = $('float');
+    f.textContent = text;
+    f.classList.remove('show'); void f.offsetWidth; f.classList.add('show');
+  }
+
+  function submit() {
+    R.locked = true;
+    const ms = Math.round(performance.now() - R.qStart);
+    const ok = +R.input === R.ans;
+    recordAnswer(R.cur, ok, ms);
+    const board = $('board');
+    if (ok) {
+      R.correct++; R.streak++; R.times.push(ms);
+      const mult = Math.min(3, 1 + Math.floor(R.streak / 5));
+      const bonus = ms < 2000 ? 5 : ms < 4000 ? 2 : 0;
+      const pts = (10 + bonus) * mult;
+      R.score += pts;
+      $('score').textContent = R.score;
+      board.classList.add('good');
+      flash('+' + pts);
+      if (R.streak % 5 === 0 && R.streak <= 10) { SFX.streak(); buzz([30, 40, 30]); setStreak(true); }
+      else { SFX.ok(); setStreak(R.streak % 5 === 0); }
+      setTimeout(() => { if (!R.ended) nextQuestion(); }, 220);
+    } else {
+      R.wrong++; R.streak = 0;
+      R.mistakes.push({ k: R.cur, given: R.input });
+      R.requeue.push({ k: R.cur, at: R.qi + 3 + Math.floor(Math.random() * 3) });
+      setStreak();
+      const el = $('ans');
+      el.classList.remove('empty'); el.classList.add('wrong');
+      el.innerHTML = `<s>${R.input}</s><span class="red">${R.ans}</span>`;
+      $('hint').textContent = 'Запомни!';
+      board.classList.add('bad');
+      if (!reduced) { board.classList.remove('shake'); void board.offsetWidth; board.classList.add('shake'); }
+      SFX.bad(); buzz(150);
+      setTimeout(() => { if (!R.ended) nextQuestion(); }, 1300);
+    }
+    save();
+  }
+
+  function tick() {
+    if (!R || R.ended) return;
+    const left = Math.max(0, ROUND_MS - (performance.now() - R.start));
+    const sec = Math.ceil(left / 1000);
+    $('timeFill').style.width = (left / ROUND_MS * 100) + '%';
+    if (sec !== R.lastSec) {
+      R.lastSec = sec;
+      $('timeLeft').textContent = sec;
+      if (sec <= 10) $('timebar').classList.add('late');
+      if (sec <= 5 && sec > 0) SFX.tick();
+    }
+    if (left <= 0) endRound();
+    else requestAnimationFrame(tick);
+  }
+
+  function endRound() {
+    R.ended = true; R.locked = true;
+    releaseScreen();
+    const total = R.correct + R.wrong;
+    const acc = total ? Math.round(R.correct / total * 100) : 0;
+    const avg = R.times.length ? R.times.reduce((a, b) => a + b, 0) / R.times.length : 0;
+
+    let stars = 0;
+    if (R.correct >= 8 && acc >= 60) stars = 1;
+    if (R.correct >= 15 && acc >= 80) stars = 2;
+    if (R.correct >= 22 && acc >= 90) stars = 3;
+
+    const newBest = R.score > S.best;
+    if (newBest) S.best = R.score;
+    S.stars += stars;
+    const levelNow = levelOf(S.stars);
+    save();
+
+    $('remark').textContent = ['Попробуй ещё раз!', 'Неплохо!', 'Хорошо!', 'Отлично!'][stars];
+    $('rstars').innerHTML = [0, 1, 2].map((i) => `<span class="${i < stars ? 'on' : ''}">★</span>`).join('');
+    $('rScore').textContent = R.score;
+    $('newBest').hidden = !newBest;
+    $('newRank').hidden = levelNow <= R.levelBefore;
+    $('newRank').textContent = `Новое звание: ${LEVELS[levelNow][1]}`;
+    $('rOk').textContent = R.correct;
+    $('rBad').textContent = R.wrong;
+    $('rAcc').textContent = acc + '%';
+    $('rAvg').textContent = avg ? (avg / 1000).toFixed(1).replace('.', ',') + ' с' : '—';
+
+    // покорённые: были трудными до раунда, теперь нет
+    const conquered = R.hardBefore.filter((k) => weight(k) < 2.5);
+    $('conqWrap').hidden = !conquered.length;
+    $('conq').innerHTML = conquered.map((k) => `<li>${fmt(k)} = ${parse(k)[0] * parse(k)[1]} теперь тебе покорился!</li>`).join('');
+
+    // ошибки этого раунда (без повторов)
+    const seen = new Set();
+    const uniq = R.mistakes.filter((m) => !seen.has(m.k) && seen.add(m.k));
+    $('mistWrap').hidden = !uniq.length;
+    $('mist').innerHTML = uniq.map((m) => {
+      const [a, b] = parse(m.k);
+      return `<li><b>${a} × ${b} = ${a * b}</b><span>ты написал <s>${m.given}</s></span></li>`;
+    }).join('');
+
+    const hard = hardKeys().slice(0, 5);
+    $('hardWrap').hidden = !hard.length;
+    $('hard').innerHTML = hard.map((k) => `<span>${fmt(k)}</span>`).join('');
+
+    show('result');
+    SFX.end();
+    if ((newBest && R.score > 0) || stars === 3) confetti();
+  }
+
+  function quit() {
+    if (!R) return;
+    R.ended = true;
+    releaseScreen();
+    $('count').hidden = true;
+    renderStart(); show('start');
+  }
+
+  // ---------- input wiring ----------
+  const pad = $('keypad');
+  pad.addEventListener('pointerdown', (e) => {
+    const b = e.target.closest('.key'); if (!b) return;
+    e.preventDefault();
+    press(b.dataset.k);
+  });
+  pad.addEventListener('click', (e) => {
+    const b = e.target.closest('.key');
+    if (b && e.detail === 0) press(b.dataset.k); // активация с клавиатуры
+  });
+  document.addEventListener('keydown', (e) => {
+    if ($('game').hidden) return;
+    let k = null;
+    if (/^[0-9]$/.test(e.key)) k = e.key;
+    else if (e.key === 'Backspace') k = 'del';
+    else if (e.key === 'Enter') k = 'ok';
+    if (!k) return;
+    e.preventDefault();
+    const btn = pad.querySelector(`[data-k="${k}"]`);
+    if (btn) { btn.classList.add('pressed'); setTimeout(() => btn.classList.remove('pressed'), 90); }
+    press(k);
+  });
+  $('quitBtn').addEventListener('click', quit);
+  $('againBtn').addEventListener('click', () => startRound(R ? R.mode : 'normal'));
+  $('menuBtn').addEventListener('click', () => { renderStart(); show('start'); });
+
+  // ---------- confetti ----------
+  function confetti() {
+    if (reduced) return;
+    const cv = $('confetti');
+    cv.hidden = false;
+    const ctx = cv.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const W = cv.width = innerWidth * dpr, H = cv.height = innerHeight * dpr;
+    const css = getComputedStyle(document.documentElement);
+    const colors = ['--pen', '--red', '--green', '--marker'].map((v) => css.getPropertyValue(v).trim());
+    const parts = Array.from({ length: 140 }, () => ({
+      x: Math.random() * W, y: -Math.random() * H * 0.5,
+      vx: (Math.random() - 0.5) * 3 * dpr, vy: (2 + Math.random() * 4) * dpr,
+      s: (5 + Math.random() * 7) * dpr, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.3,
+      c: colors[Math.floor(Math.random() * colors.length)],
+    }));
+    const t0 = performance.now();
+    (function frame(now) {
+      ctx.clearRect(0, 0, W, H);
+      parts.forEach((p) => {
+        p.x += p.vx; p.y += p.vy; p.r += p.vr; p.vy += 0.04 * dpr;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+        ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+        ctx.restore();
+      });
+      if (now - t0 < 3200) requestAnimationFrame(frame);
+      else { ctx.clearRect(0, 0, W, H); cv.hidden = true; }
+    })(t0);
+  }
+
+  renderStart();
+
+  // офлайн-режим (работает на https-хостинге и на localhost)
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
