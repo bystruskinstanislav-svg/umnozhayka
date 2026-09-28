@@ -307,8 +307,8 @@
 
     <div class="card player">
       <div>
-        <div class="label">Звание</div>
-        <div class="rank-name" id="rankName">Новичок</div>
+        <div class="label">Звание за звёзды</div>
+        <div class="rank-name" id="rankName">Искра</div>
       </div>
       <div class="stars-total"><span class="st">★</span> <span id="starsTotal">0</span></div>
       <div class="lvl-bar"><i id="lvlFill"></i></div>
@@ -319,7 +319,7 @@
     <div class="card mastery-card" aria-labelledby="masteryTitle">
       <div>
         <div class="label">Знание всей таблицы</div>
-        <div class="mastery-title" id="masteryTitle">Первый шаг</div>
+        <div class="mastery-title" id="masteryTitle">Освоено 0 из 64</div>
       </div>
       <div class="mastery-score"><span id="masteryScore">0</span><small>/100</small></div>
       <div class="mastery-bar" role="progressbar" aria-label="Рейтинг знания таблицы умножения" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="masteryFill"></i></div>
@@ -549,7 +549,7 @@
   const KEY = 'umnozhayka-v1';
   const NUMS = [2, 3, 4, 5, 6, 7, 8, 9];
   const ROUND_MS = 60000;
-  const LEVELS = [[0, 'Новичок'], [5, 'Ученик'], [15, 'Знаток'], [30, 'Мастер'], [60, 'Гений умножения']];
+  const LEVELS = [[0, 'Искра'], [5, 'На разгоне'], [15, 'Турбо'], [30, 'Босс умножения'], [60, 'Легенда']];
   const $ = (id) => document.getElementById(id);
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const calculateMastery = window.Mastery.calculate;
@@ -701,13 +701,13 @@
     $('best').textContent = S.best;
 
     const knowledge = calculateMastery(S.stats);
-    $('masteryTitle').textContent = knowledge.stage;
+    $('masteryTitle').textContent = `Освоено ${knowledge.masteredCount} из ${knowledge.total}`;
     $('masteryScore').textContent = knowledge.score;
     $('masteryFill').style.width = knowledge.score + '%';
     $('masteryFill').parentElement.setAttribute('aria-valuenow', knowledge.score);
     $('masteryDetail').textContent = knowledge.complete
-      ? 'Все 64 примера подтверждены — таблица освоена!'
-      : `Освоено ${knowledge.masteredCount} из ${knowledge.total} · не проверено: ${knowledge.unseen}`;
+      ? 'Таблица освоена — все примеры подтверждены!'
+      : `Не проверено: ${knowledge.unseen} · в тренировке: ${knowledge.total - knowledge.unseen - knowledge.masteredCount}`;
     $('masteryFocus').innerHTML = knowledge.complete
       ? '<b>100 баллов!</b> Ты уверенно знаешь всю таблицу.'
       : knowledge.weak.length

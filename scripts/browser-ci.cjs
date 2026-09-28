@@ -69,6 +69,31 @@ const server = createServer((req, res) => {
         await page.reload();
         assert.equal(await page.locator('#map td').count(),64);
         assert.equal(await page.locator('#fixBtn').isVisible(),true);
+
+        // Star ranks are independent of knowledge; check every boundary.
+        for (const [stars, name] of [[0,'Искра'],[4,'Искра'],[5,'На разгоне'],[14,'На разгоне'],[15,'Турбо'],[29,'Турбо'],[30,'Босс умножения'],[59,'Босс умножения'],[60,'Легенда']]) {
+          await page.evaluate(stars => localStorage.setItem('umnozhayka-v1', JSON.stringify({stars,sound:false})), stars);
+          await page.reload();
+          assert.equal(await page.locator('#rankName').innerText(), name);
+          assert.equal(await page.locator('#masteryTitle').innerText(), 'Освоено 0 из 64');
+          assert.equal(await page.locator('#masteryScore').innerText(), '0');
+          assert.equal(await page.locator('#map td').count(), 64);
+        }
+        await page.evaluate(() => {
+          const stats = {};
+          for (let a=2;a<=9;a++) for(let b=2;b<=9;b++)
+            stats[a+'x'+b]={n:5,err:0,last:[1,1,1,1,1],avgT:2000,lastAt:Date.now()};
+          localStorage.setItem('umnozhayka-v1',JSON.stringify({stars:0,sound:false,stats}));
+        });
+        await page.reload();
+        assert.equal(await page.locator('#rankName').innerText(),'Искра');
+        assert.equal(await page.locator('#masteryTitle').innerText(),'Освоено 64 из 64');
+        assert.equal(await page.locator('#masteryScore').innerText(),'100');
+        assert.equal(await page.locator('#map td.m-good').count(),64);
+        await page.locator('#soundBtn').click();
+        assert.equal(await page.locator('#soundBtn').getAttribute('aria-pressed'),'true');
+        await page.locator('#soundBtn').click();
+        assert.equal(await page.locator('#soundBtn').getAttribute('aria-pressed'),'false');
         // Partially damaged legacy storage must not disable all controls.
         await page.evaluate(() => localStorage.setItem('umnozhayka-v1',JSON.stringify({
           tables:[], stats:{'7x8':{n:4,last:null},'bad':{}}, stars:null, best:'invalid'
