@@ -34,27 +34,42 @@
     return 1 - (age - 30 * DAY) / (60 * DAY);
   }
 
+  const REQUIRED = 10;
+  function streak(stat) {
+    const history = Array.isArray(stat?.last) ? stat.last.slice(-REQUIRED) : [];
+    let count = 0;
+    for (let i = history.length - 1; i >= 0; i--) {
+      if (history[i] !== 1 && history[i] !== true) break;
+      count++;
+    }
+    return count;
+  }
+
+  function record(stat, ok, ms, now = Date.now()) {
+    const s = stat || { n: 0, err: 0, last: [], avgT: 0 };
+    s.n++;
+    if (!ok) s.err++;
+    s.last = (Array.isArray(s.last) ? s.last : []).concat(ok ? 1 : 0).slice(-REQUIRED);
+    if (ok) s.avgT = s.avgT ? Math.round(s.avgT * 0.6 + ms * 0.4) : ms;
+    s.lastAt = now;
+    return s;
+  }
+
   function factScore(stat, now) {
     if (!stat || !Number.isFinite(stat.n) || stat.n <= 0) return 0;
-    const recent = Array.isArray(stat.last) ? stat.last.slice(-5) : [];
-    const accuracy = recent.length
-      ? recent.reduce((sum, value) => sum + (value ? 1 : 0), 0) / recent.length
-      : clamp(1 - (Number(stat.err) || 0) / stat.n, 0, 1);
-    const confidence = clamp(stat.n / 5, 0, 1);
     const avgT = Number(stat.avgT) || 0;
     const speed = avgT > 0 ? clamp((6000 - avgT) / 3500, 0, 1) : 0;
     const fresh = freshness(Number(stat.lastAt), now);
-    return Math.round(100 * (0.5 * accuracy + 0.2 * confidence + 0.2 * speed + 0.1 * fresh));
+    // Один ответ даёт не более 10%; ошибка сбрасывает подтверждение.
+    return Math.floor(100 * streak(stat) / REQUIRED * (0.7 + 0.2 * speed + 0.1 * fresh) + 1e-9);
   }
 
   function isMastered(stat, now) {
-    if (!stat || stat.n < 5 || !Array.isArray(stat.last)) return false;
-    const lastFive = stat.last.slice(-5);
-    return lastFive.length === 5
-      && lastFive.every(Boolean)
+    return streak(stat) === REQUIRED
       && Number(stat.avgT) > 0
       && Number(stat.avgT) <= 2500
       && Number.isFinite(Number(stat.lastAt))
+      && now - Number(stat.lastAt) >= 0
       && now - Number(stat.lastAt) <= 30 * DAY;
   }
 
@@ -98,5 +113,5 @@
     };
   }
 
-  return { NUMS, TOTAL_FACTS, factScore, isMastered, calculate, stageFor };
+  return { REQUIRED, streak, record, NUMS, TOTAL_FACTS, factScore, isMastered, calculate, stageFor };
 });

@@ -327,6 +327,7 @@
       <p class="mastery-focus" id="masteryFocus">Начни тренировку — рейтинг покажет, что уже выучено.</p>
     </div>
 
+    <p class="rules">Для каждого примера — 10 верных ответов подряд. Ошибка сбрасывает серию этого примера. Для освоения также нужны быстрые ответы (до 2,5 с в среднем) и практика за последние 30 дней.</p>
     <div class="card">
       <div class="label">Какие таблицы тренируем</div>
       <div class="chips" id="chips"></div>
@@ -343,7 +344,7 @@
         <span><i style="background:var(--new)"></i>Не было</span>
         <span><i style="background:var(--red-soft);box-shadow:inset 0 0 0 2px var(--red)"></i>Трудно</span>
         <span><i style="background:var(--yellow-soft)"></i>Медленно</span>
-        <span><i style="background:var(--green-soft)"></i>Знаю</span>
+        <span><i style="background:var(--green-soft)"></i>Тренирую</span>
         <span><i style="background:var(--green)"></i>Выучено</span>
       </div>
     </div>
@@ -424,7 +425,7 @@
 </div>
 <canvas id="confetti" hidden></canvas>
 
-<script src="mastery.js"></script>
+<script src="mastery.js?v=3"></script>
 <script>
 (() => {
   const KEY = 'umnozhayka-v1';
@@ -448,34 +449,28 @@
   const S = load();
 
   // ---------- difficulty model ----------
-  // Каждый пример (a×b) хранит: попытки, ошибки, 5 последних результатов, среднее время верного ответа.
+  // Каждый пример (a×b) хранит: попытки, ошибки, 10 последних результатов, среднее время верного ответа.
   function weight(k) {
     const s = S.stats[k];
     if (!s || !s.n) return 2;                       // ещё не встречался
-    const errs = s.last.filter((x) => !x).length;
+    const errs = s.last.slice(-5).filter((x) => !x).length;
     let w = 1 + 3 * errs;                            // +3 за каждую свежую ошибку
     const t = s.avgT || 0;
     if (t > 5000) w += 2; else if (t > 3500) w += 1; // медленно = считал, а не помнил
-    const tail = s.last.slice(-3);
-    if (tail.length === 3 && tail.every(Boolean) && t && t < 3000) w *= 0.5; // уверенно выучен
+    if (window.Mastery.isMastered(s, Date.now())) w *= 0.5;
     return w;
   }
   function recordAnswer(k, ok, ms) {
-    const s = S.stats[k] || (S.stats[k] = { n: 0, err: 0, last: [], avgT: 0 });
-    s.n++;
-    if (!ok) s.err++;
-    s.last.push(ok ? 1 : 0);
-    if (s.last.length > 5) s.last.shift();
-    if (ok) s.avgT = s.avgT ? Math.round(s.avgT * 0.6 + ms * 0.4) : ms;
-    s.lastAt = Date.now();
+    S.stats[k] = window.Mastery.record(S.stats[k], ok, ms);
   }
+
   function mastery(k) {
     const s = S.stats[k];
     if (!s || !s.n) return 'new';
     const w = weight(k);
     if (w >= 4) return 'hard';
     if (w >= 2) return 'mid';
-    if (s.n >= 3 && w <= 1) return 'good';
+    if (window.Mastery.isMastered(s, Date.now())) return 'good';
     return 'ok';
   }
   const hardKeys = () => Object.keys(S.stats)
@@ -577,7 +572,7 @@
     $('masteryFocus').innerHTML = knowledge.complete
       ? '<b>100 баллов!</b> Ты уверенно знаешь всю таблицу.'
       : knowledge.weak.length
-        ? `Следующая цель: <b>${knowledge.weak.slice(0, 3).map((x) => fmt(x.key)).join(', ')}</b>`
+        ? `Следующая цель: <b>${knowledge.weak.slice(0, 3).map((x) => fmt(x.key) + ' — ' + window.Mastery.streak(S.stats[x.key]) + '/10').join(', ')}</b>`
         : 'Продолжай отвечать быстро и без ошибок.';
 
     if (li < LEVELS.length - 1) {

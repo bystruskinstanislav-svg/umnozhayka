@@ -15,7 +15,7 @@ requireFile('mastery.js');
   'id="masteryFill"',
   'id="masteryDetail"',
   'id="masteryFocus"',
-  '<script src="mastery.js"></script>',
+  '<script src="mastery.js?v=3"></script>',
 ].forEach((marker) => {
   if (!index.includes(marker)) throw new Error('index.html is missing: ' + marker);
 });
