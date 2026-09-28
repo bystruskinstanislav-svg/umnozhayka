@@ -1,9 +1,10 @@
 // Офлайн-режим: после первого открытия игра работает без интернета.
 // При изменении файлов игры увеличьте номер версии, чтобы телефоны получили обновление.
-const CACHE = 'umnozhayka-v1';
+const CACHE = 'umnozhayka-v2';
 const CORE = [
   './',
   './index.html',
+  './mastery.js',
   './manifest.webmanifest',
   './icon.svg',
   './icon-192.png',

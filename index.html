@@ -122,6 +122,18 @@
   .best { grid-column: 1 / -1; display: flex; justify-content: space-between; border-top: 2px dashed var(--line); padding-top: 10px; margin-top: 4px; font-weight: 700; }
   .best b { font-family: var(--display); font-variant-numeric: tabular-nums; }
 
+  /* ---------- knowledge rating ---------- */
+  .mastery-card { display: grid; grid-template-columns: 1fr auto; gap: 8px 14px; align-items: center; }
+  .mastery-title { font-family: var(--display); font-size: 18px; font-weight: 700; }
+  .mastery-score { font-family: var(--display); font-size: 30px; font-weight: 800; color: var(--pen); font-variant-numeric: tabular-nums; }
+  .mastery-score small { font-family: var(--body); font-size: 13px; color: var(--muted); }
+  .mastery-bar { grid-column: 1 / -1; height: 12px; overflow: hidden; border-radius: 99px; background: var(--new); }
+  .mastery-bar i { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--pen), var(--green)); transition: width .6s ease; }
+  .mastery-detail, .mastery-focus { grid-column: 1 / -1; font-size: 14px; color: var(--muted); }
+  .mastery-focus { border-top: 2px dashed var(--line); padding-top: 8px; }
+  .mastery-focus b { color: var(--ink); }
+  .mastery-badge { background: var(--pen-soft); color: var(--pen); }
+
   /* ---------- table chips ---------- */
   .chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
   .chip {
@@ -304,6 +316,17 @@
       <div class="best"><span>Рекорд</span><span><b id="best">0</b> очков</span></div>
     </div>
 
+    <div class="card mastery-card" aria-labelledby="masteryTitle">
+      <div>
+        <div class="label">Знание всей таблицы</div>
+        <div class="mastery-title" id="masteryTitle">Первый шаг</div>
+      </div>
+      <div class="mastery-score"><span id="masteryScore">0</span><small>/100</small></div>
+      <div class="mastery-bar" role="progressbar" aria-label="Рейтинг знания таблицы умножения" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="masteryFill"></i></div>
+      <p class="mastery-detail" id="masteryDetail">Освоено 0 из 64 примеров</p>
+      <p class="mastery-focus" id="masteryFocus">Начни тренировку — рейтинг покажет, что уже выучено.</p>
+    </div>
+
     <div class="card">
       <div class="label">Какие таблицы тренируем</div>
       <div class="chips" id="chips"></div>
@@ -366,6 +389,7 @@
       <div class="badges">
         <span class="badge" id="newBest" hidden>Новый рекорд!</span>
         <span class="badge" id="newRank" hidden></span>
+        <span class="badge mastery-badge" id="masteryResult"></span>
       </div>
     </div>
 
@@ -400,6 +424,7 @@
 </div>
 <canvas id="confetti" hidden></canvas>
 
+<script src="mastery.js"></script>
 <script>
 (() => {
   const KEY = 'umnozhayka-v1';
@@ -408,6 +433,7 @@
   const LEVELS = [[0, 'Новичок'], [5, 'Ученик'], [15, 'Знаток'], [30, 'Мастер'], [60, 'Гений умножения']];
   const $ = (id) => document.getElementById(id);
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const calculateMastery = window.Mastery.calculate;
 
   // ---------- storage ----------
   const defaults = () => ({ best: 0, stars: 0, tables: NUMS.slice(), sound: true, stats: {} });
@@ -441,6 +467,7 @@
     s.last.push(ok ? 1 : 0);
     if (s.last.length > 5) s.last.shift();
     if (ok) s.avgT = s.avgT ? Math.round(s.avgT * 0.6 + ms * 0.4) : ms;
+    s.lastAt = Date.now();
   }
   function mastery(k) {
     const s = S.stats[k];
@@ -538,6 +565,21 @@
     $('rankName').textContent = LEVELS[li][1];
     $('starsTotal').textContent = S.stars;
     $('best').textContent = S.best;
+
+    const knowledge = calculateMastery(S.stats);
+    $('masteryTitle').textContent = knowledge.stage;
+    $('masteryScore').textContent = knowledge.score;
+    $('masteryFill').style.width = knowledge.score + '%';
+    $('masteryFill').parentElement.setAttribute('aria-valuenow', knowledge.score);
+    $('masteryDetail').textContent = knowledge.complete
+      ? 'Все 64 примера подтверждены — таблица освоена!'
+      : `Освоено ${knowledge.masteredCount} из ${knowledge.total} · не проверено: ${knowledge.unseen}`;
+    $('masteryFocus').innerHTML = knowledge.complete
+      ? '<b>100 баллов!</b> Ты уверенно знаешь всю таблицу.'
+      : knowledge.weak.length
+        ? `Следующая цель: <b>${knowledge.weak.slice(0, 3).map((x) => fmt(x.key)).join(', ')}</b>`
+        : 'Продолжай отвечать быстро и без ошибок.';
+
     if (li < LEVELS.length - 1) {
       const [from] = LEVELS[li], [to, name] = LEVELS[li + 1];
       $('lvlFill').style.width = Math.round((S.stars - from) / (to - from) * 100) + '%';
@@ -579,6 +621,7 @@
       qStart: 0, start: 0, ended: false, lastSec: 60,
       hardBefore: hardKeys().filter((k) => weight(k) >= 4),
       levelBefore: levelOf(S.stars),
+      ratingBefore: calculateMastery(S.stats).score,
     };
     $('score').textContent = '0';
     $('timeLeft').textContent = '60';
@@ -737,6 +780,10 @@
     S.stars += stars;
     const levelNow = levelOf(S.stars);
     save();
+
+    const knowledge = calculateMastery(S.stats);
+    const ratingDelta = knowledge.score - R.ratingBefore;
+    $('masteryResult').textContent = `Знание: ${knowledge.score}/100${ratingDelta > 0 ? ` (+${ratingDelta})` : ''}`;
 
     $('remark').textContent = ['Попробуй ещё раз!', 'Неплохо!', 'Хорошо!', 'Отлично!'][stars];
     $('rstars').innerHTML = [0, 1, 2].map((i) => `<span class="${i < stars ? 'on' : ''}">★</span>`).join('');

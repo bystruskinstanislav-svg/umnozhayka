@@ -1,0 +1,27 @@
+const fs = require('node:fs');
+
+function requireFile(path) {
+  if (!fs.existsSync(path)) throw new Error('Missing required file: ' + path);
+  return fs.readFileSync(path, 'utf8');
+}
+
+const index = requireFile('index.html');
+const sw = requireFile('sw.js');
+const manifest = JSON.parse(requireFile('manifest.webmanifest'));
+requireFile('mastery.js');
+
+[
+  'id="masteryScore"',
+  'id="masteryFill"',
+  'id="masteryDetail"',
+  'id="masteryFocus"',
+  '<script src="mastery.js"></script>',
+].forEach((marker) => {
+  if (!index.includes(marker)) throw new Error('index.html is missing: ' + marker);
+});
+
+if (!sw.includes("'./mastery.js'")) throw new Error('Service worker does not cache mastery.js');
+if (!Array.isArray(manifest.icons) || manifest.icons.length < 2) throw new Error('PWA manifest icons are invalid');
+if (!manifest.start_url || !manifest.scope) throw new Error('PWA manifest routing is incomplete');
+
+console.log('Static and PWA checks passed.');
