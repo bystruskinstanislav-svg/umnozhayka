@@ -1,9 +1,10 @@
 // Офлайн-режим: после первого открытия игра работает без интернета.
 // При изменении файлов игры увеличьте номер версии, чтобы телефоны получили обновление.
-const CACHE = 'umnozhayka-v1';
+const CACHE = 'umnozhayka-v6';
 const CORE = [
   './',
   './index.html',
+  './mastery.js',
   './manifest.webmanifest',
   './icon.svg',
   './icon-192.png',
@@ -19,7 +20,7 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('umnozhayka-') && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -43,6 +44,7 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
       withTimeout(fetch(req), 3000)
         .then((res) => {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put('./index.html', copy));
           return res;
