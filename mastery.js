@@ -34,7 +34,7 @@
     return 1 - (age - 30 * DAY) / (60 * DAY);
   }
 
-  const REQUIRED = 10;
+  const REQUIRED = 5;
   function streak(stat) {
     const history = Array.isArray(stat?.last) ? stat.last.slice(-REQUIRED) : [];
     let count = 0;
@@ -60,7 +60,7 @@
     const avgT = Number(stat.avgT) || 0;
     const speed = avgT > 0 ? clamp((6000 - avgT) / 3500, 0, 1) : 0;
     const fresh = freshness(Number(stat.lastAt), now);
-    // Один ответ даёт не более 10%; ошибка сбрасывает подтверждение.
+    // Один ответ даёт не более 20%; ошибка сбрасывает подтверждение.
     return Math.floor(100 * streak(stat) / REQUIRED * (0.7 + 0.2 * speed + 0.1 * fresh) + 1e-9);
   }
 

@@ -327,7 +327,7 @@
       <p class="mastery-focus" id="masteryFocus">Начни тренировку — рейтинг покажет, что уже выучено.</p>
     </div>
 
-    <p class="rules">Для каждого примера — 10 верных ответов подряд. Ошибка сбрасывает серию этого примера. Для освоения также нужны быстрые ответы (до 2,5 с в среднем) и практика за последние 30 дней.</p>
+    <p class="rules">Для каждого примера — 5 верных ответов подряд. Ошибка сбрасывает серию этого примера. Для освоения также нужны быстрые ответы (до 2,5 с в среднем) и практика за последние 30 дней.</p>
     <div class="card">
       <div class="label">Какие таблицы тренируем</div>
       <div class="chips" id="chips"></div>
@@ -462,7 +462,7 @@
     return 1 - (age - 30 * DAY) / (60 * DAY);
   }
 
-  const REQUIRED = 10;
+  const REQUIRED = 5;
   function streak(stat) {
     const history = Array.isArray(stat?.last) ? stat.last.slice(-REQUIRED) : [];
     let count = 0;
@@ -488,7 +488,7 @@
     const avgT = Number(stat.avgT) || 0;
     const speed = avgT > 0 ? clamp((6000 - avgT) / 3500, 0, 1) : 0;
     const fresh = freshness(Number(stat.lastAt), now);
-    // Один ответ даёт не более 10%; ошибка сбрасывает подтверждение.
+    // Один ответ даёт не более 20%; ошибка сбрасывает подтверждение.
     return Math.floor(100 * streak(stat) / REQUIRED * (0.7 + 0.2 * speed + 0.1 * fresh) + 1e-9);
   }
 
@@ -573,7 +573,7 @@
             if (!s || typeof s !== 'object') continue;
             clean.stats[k] = {
               n: nonnegative(s.n), err: nonnegative(s.err),
-              last: Array.isArray(s.last) ? s.last.slice(-10).map((v) => v === 1 || v === true ? 1 : 0) : [],
+              last: Array.isArray(s.last) ? s.last.slice(-window.Mastery.REQUIRED).map((v) => v === 1 || v === true ? 1 : 0) : [],
               avgT: nonnegative(s.avgT),
               ...(Number.isFinite(s.lastAt) ? {lastAt: s.lastAt} : {}),
             };
@@ -588,7 +588,7 @@
   const S = load();
 
   // ---------- difficulty model ----------
-  // Каждый пример (a×b) хранит: попытки, ошибки, 10 последних результатов, среднее время верного ответа.
+  // Каждый пример (a×b) хранит: попытки, ошибки, 5 последних результатов, среднее время верного ответа.
   function weight(k) {
     const s = S.stats[k];
     if (!s || !s.n) return 2;                       // ещё не встречался
@@ -711,7 +711,7 @@
     $('masteryFocus').innerHTML = knowledge.complete
       ? '<b>100 баллов!</b> Ты уверенно знаешь всю таблицу.'
       : knowledge.weak.length
-        ? `Следующая цель: <b>${knowledge.weak.slice(0, 3).map((x) => fmt(x.key) + ' — ' + window.Mastery.streak(S.stats[x.key]) + '/10').join(', ')}</b>`
+        ? `Следующая цель: <b>${knowledge.weak.slice(0, 3).map((x) => fmt(x.key) + ' — ' + window.Mastery.streak(S.stats[x.key]) + '/' + window.Mastery.REQUIRED).join(', ')}</b>`
         : 'Продолжай отвечать быстро и без ошибок.';
 
     if (li < LEVELS.length - 1) {
