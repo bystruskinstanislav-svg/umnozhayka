@@ -15,7 +15,7 @@ requireFile('mastery.js');
   'id="masteryFill"',
   'id="masteryDetail"',
   'id="masteryFocus"',
-  '<script src="mastery.js?v=3"></script>',
+  '<script id="mastery-code">',
 ].forEach((marker) => {
   if (!index.includes(marker)) throw new Error('index.html is missing: ' + marker);
 });
@@ -25,3 +25,8 @@ if (!Array.isArray(manifest.icons) || manifest.icons.length < 2) throw new Error
 if (!manifest.start_url || !manifest.scope) throw new Error('PWA manifest routing is incomplete');
 
 console.log('Static and PWA checks passed.');
+
+const embedded = index.match(/<script id="mastery-code">\n([\s\S]*?)<\/script>/)[1];
+if (embedded !== requireFile('mastery.js')) throw new Error('Embedded rating module is out of sync');
+const vm = require('node:vm');
+for (const match of index.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)) new vm.Script(match[1]);

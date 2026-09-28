@@ -425,7 +425,125 @@
 </div>
 <canvas id="confetti" hidden></canvas>
 
-<script src="mastery.js?v=3"></script>
+<script id="mastery-code">
+(function (root, factory) {
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.Mastery = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  const NUMS = [2, 3, 4, 5, 6, 7, 8, 9];
+  const DAY = 24 * 60 * 60 * 1000;
+  const TOTAL_FACTS = NUMS.length * NUMS.length;
+  const STAGES = [
+    [0, 'Первый шаг'],
+    [20, 'Исследователь'],
+    [40, 'Тренирующийся'],
+    [60, 'Знаток умножения'],
+    [80, 'Мастер таблицы'],
+    [95, 'Эксперт'],
+    [100, 'Таблица освоена'],
+  ];
+
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+  function allKeys() {
+    const keys = [];
+    NUMS.forEach((a) => NUMS.forEach((b) => keys.push(a + 'x' + b)));
+    return keys;
+  }
+
+  function freshness(lastAt, now) {
+    if (!Number.isFinite(lastAt)) return 0.5; // старый прогресс сохраняется, но требует подтверждения
+    const age = Math.max(0, now - lastAt);
+    if (age <= 30 * DAY) return 1;
+    if (age >= 90 * DAY) return 0;
+    return 1 - (age - 30 * DAY) / (60 * DAY);
+  }
+
+  const REQUIRED = 10;
+  function streak(stat) {
+    const history = Array.isArray(stat?.last) ? stat.last.slice(-REQUIRED) : [];
+    let count = 0;
+    for (let i = history.length - 1; i >= 0; i--) {
+      if (history[i] !== 1 && history[i] !== true) break;
+      count++;
+    }
+    return count;
+  }
+
+  function record(stat, ok, ms, now = Date.now()) {
+    const s = stat || { n: 0, err: 0, last: [], avgT: 0 };
+    s.n++;
+    if (!ok) s.err++;
+    s.last = (Array.isArray(s.last) ? s.last : []).concat(ok ? 1 : 0).slice(-REQUIRED);
+    if (ok) s.avgT = s.avgT ? Math.round(s.avgT * 0.6 + ms * 0.4) : ms;
+    s.lastAt = now;
+    return s;
+  }
+
+  function factScore(stat, now) {
+    if (!stat || !Number.isFinite(stat.n) || stat.n <= 0) return 0;
+    const avgT = Number(stat.avgT) || 0;
+    const speed = avgT > 0 ? clamp((6000 - avgT) / 3500, 0, 1) : 0;
+    const fresh = freshness(Number(stat.lastAt), now);
+    // Один ответ даёт не более 10%; ошибка сбрасывает подтверждение.
+    return Math.floor(100 * streak(stat) / REQUIRED * (0.7 + 0.2 * speed + 0.1 * fresh) + 1e-9);
+  }
+
+  function isMastered(stat, now) {
+    return streak(stat) === REQUIRED
+      && Number(stat.avgT) > 0
+      && Number(stat.avgT) <= 2500
+      && Number.isFinite(Number(stat.lastAt))
+      && now - Number(stat.lastAt) >= 0
+      && now - Number(stat.lastAt) <= 30 * DAY;
+  }
+
+  function stageFor(score) {
+    let stage = STAGES[0][1];
+    STAGES.forEach(([minimum, name]) => {
+      if (score >= minimum) stage = name;
+    });
+    return stage;
+  }
+
+  function calculate(stats, now = Date.now()) {
+    const source = stats && typeof stats === 'object' ? stats : {};
+    const facts = allKeys().map((key) => {
+      const stat = source[key];
+      return { key, score: factScore(stat, now), mastered: isMastered(stat, now), seen: Boolean(stat && stat.n) };
+    });
+    const sorted = facts.slice().sort((a, b) => a.score - b.score || a.key.localeCompare(b.key));
+    const average = facts.reduce((sum, fact) => sum + fact.score, 0) / TOTAL_FACTS;
+    const weakestAverage = sorted.slice(0, 8).reduce((sum, fact) => sum + fact.score, 0) / 8;
+    const unseen = facts.filter((fact) => !fact.seen).length;
+    const masteredCount = facts.filter((fact) => fact.mastered).length;
+    let score = Math.round(average * 0.8 + weakestAverage * 0.2);
+
+    // Один пробел не должен скрываться высоким средним баллом.
+    if (unseen > 0) score = Math.min(score, 79);
+    if (facts.some((fact) => fact.score < 50)) score = Math.min(score, 89);
+    if (masteredCount < TOTAL_FACTS) score = Math.min(score, 99);
+
+    const complete = masteredCount === TOTAL_FACTS && facts.every((fact) => fact.score === 100);
+    if (complete) score = 100;
+
+    return {
+      score,
+      stage: stageFor(score),
+      masteredCount,
+      total: TOTAL_FACTS,
+      unseen,
+      complete,
+      weak: sorted.filter((fact) => !fact.mastered).slice(0, 5),
+    };
+  }
+
+  return { REQUIRED, streak, record, NUMS, TOTAL_FACTS, factScore, isMastered, calculate, stageFor };
+});
+</script>
 <script>
 (() => {
   const KEY = 'umnozhayka-v1';
@@ -441,7 +559,28 @@
   function load() {
     try {
       const raw = JSON.parse(localStorage.getItem(KEY));
-      if (raw && typeof raw === 'object') return Object.assign(defaults(), raw);
+      if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        const clean = defaults();
+        const nonnegative = (v) => Number.isFinite(v) && v >= 0 ? v : 0;
+        clean.best = nonnegative(raw.best);
+        clean.stars = nonnegative(raw.stars);
+        clean.sound = typeof raw.sound === 'boolean' ? raw.sound : true;
+        const tables = Array.isArray(raw.tables) ? [...new Set(raw.tables.filter((v) => NUMS.includes(v)))] : [];
+        if (tables.length) clean.tables = tables;
+        if (raw.stats && typeof raw.stats === 'object') {
+          for (const a of NUMS) for (const b of NUMS) {
+            const k = a + 'x' + b, s = raw.stats[k];
+            if (!s || typeof s !== 'object') continue;
+            clean.stats[k] = {
+              n: nonnegative(s.n), err: nonnegative(s.err),
+              last: Array.isArray(s.last) ? s.last.slice(-10).map((v) => v === 1 || v === true ? 1 : 0) : [],
+              avgT: nonnegative(s.avgT),
+              ...(Number.isFinite(s.lastAt) ? {lastAt: s.lastAt} : {}),
+            };
+          }
+        }
+        return clean;
+      }
     } catch (e) {}
     return defaults();
   }
@@ -489,7 +628,7 @@
   let AC = null;
   function audio() {
     if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
-    if (AC.state === 'suspended') AC.resume();
+    if (AC.state === 'suspended') AC.resume().catch(() => {});
     return AC;
   }
   function tone(freq, dur, type = 'triangle', when = 0, vol = 0.14) {
@@ -598,8 +737,25 @@
 
   // ---------- round ----------
   let R = null;
+  const pending = new Set();
+  let frameId = null;
+  function clearRoundTimers() {
+    pending.forEach(clearTimeout);
+    pending.clear();
+    if (frameId !== null) cancelAnimationFrame(frameId);
+    frameId = null;
+  }
+  function later(fn, delay) {
+    const round = R;
+    const id = setTimeout(() => {
+      pending.delete(id);
+      if (R === round && !round.ended) fn();
+    }, delay);
+    pending.add(id);
+  }
 
   function startRound(mode) {
+    clearRoundTimers();
     audio();
     let pool;
     if (mode === 'mistakes') {
@@ -638,13 +794,13 @@
       el.textContent = steps[i];
       if (i === 3) { el.classList.add('go'); SFX.go(); } else SFX.tick();
       i++;
-      if (i < steps.length) setTimeout(step, 650);
-      else setTimeout(() => {
+      if (i < steps.length) later(step, 650);
+      else later(() => {
         if (!R || R.ended) return;
         el.hidden = true;
         R.start = performance.now();
         nextQuestion();
-        requestAnimationFrame(tick);
+        frameId = requestAnimationFrame(tick);
       }, 500);
     };
     step();
@@ -686,6 +842,7 @@
 
   function press(k) {
     if (!R || R.locked || R.ended) return;
+    if (performance.now() - R.start >= ROUND_MS) { endRound(); return; }
     if (k === 'del') { R.input = R.input.slice(0, -1); renderInput(); return; }
     if (k === 'ok') { if (R.input) submit(); return; }
     if (R.input.length >= 3) return;
@@ -725,7 +882,7 @@
       flash('+' + pts);
       if (R.streak % 5 === 0 && R.streak <= 10) { SFX.streak(); buzz([30, 40, 30]); setStreak(true); }
       else { SFX.ok(); setStreak(R.streak % 5 === 0); }
-      setTimeout(() => { if (!R.ended) nextQuestion(); }, 220);
+      later(nextQuestion, 220);
     } else {
       R.wrong++; R.streak = 0;
       R.mistakes.push({ k: R.cur, given: R.input });
@@ -738,7 +895,7 @@
       board.classList.add('bad');
       if (!reduced) { board.classList.remove('shake'); void board.offsetWidth; board.classList.add('shake'); }
       SFX.bad(); buzz(150);
-      setTimeout(() => { if (!R.ended) nextQuestion(); }, 1300);
+      later(nextQuestion, 1300);
     }
     save();
   }
@@ -755,10 +912,12 @@
       if (sec <= 5 && sec > 0) SFX.tick();
     }
     if (left <= 0) endRound();
-    else requestAnimationFrame(tick);
+    else frameId = requestAnimationFrame(tick);
   }
 
   function endRound() {
+    if (!R || R.ended) return;
+    clearRoundTimers();
     R.ended = true; R.locked = true;
     releaseScreen();
     const total = R.correct + R.wrong;
@@ -792,7 +951,7 @@
     $('rAvg').textContent = avg ? (avg / 1000).toFixed(1).replace('.', ',') + ' с' : '—';
 
     // покорённые: были трудными до раунда, теперь нет
-    const conquered = R.hardBefore.filter((k) => weight(k) < 2.5);
+    const conquered = R.hardBefore.filter((k) => window.Mastery.isMastered(S.stats[k], Date.now()));
     $('conqWrap').hidden = !conquered.length;
     $('conq').innerHTML = conquered.map((k) => `<li>${fmt(k)} = ${parse(k)[0] * parse(k)[1]} теперь тебе покорился!</li>`).join('');
 
@@ -816,6 +975,7 @@
 
   function quit() {
     if (!R) return;
+    clearRoundTimers();
     R.ended = true;
     releaseScreen();
     $('count').hidden = true;
